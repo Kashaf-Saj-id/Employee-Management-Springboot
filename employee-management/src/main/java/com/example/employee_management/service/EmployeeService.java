@@ -1,80 +1,92 @@
 package com.example.employee_management.service;
 
-import com.example.employee_management.model.Employee;
-import com.example.employee_management.repository.EmployeeRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.example.employee_management.model.Employee;  // Import Employee model
+import com.example.employee_management.repository.DepartmentRepository;  // Import Department repository
+import com.example.employee_management.repository.EmployeeRepository;  // Import Employee repository
+import org.springframework.beans.factory.annotation.Autowired;  // Import Autowired for dependency injection
+import org.springframework.stereotype.Service;  // Import Service annotation
 
 import java.util.List;
-import java.util.Optional;
+
+/**
+ * The EmployeeService class provides methods for managing employees,
+ * including saving, updating, deleting, and retrieving employee data.
+ */
 
 @Service
 public class EmployeeService {
 
-    private static final Logger logger = LoggerFactory.getLogger(EmployeeService.class); // Create logger instance
-
-    private final EmployeeRepository employeeRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;  // Inject the EmployeeRepository to interact with the employee data
 
     @Autowired
-    public EmployeeService(EmployeeRepository employeeRepository) {
-        this.employeeRepository = employeeRepository;
-    }
+    private DepartmentRepository departmentRepository;  // Inject the DepartmentRepository to handle department-related data
 
-    // Method to save an employee to the database
-    public Employee saveEmployee(Employee employee) {
-        logger.info("Saving employee with name: {}", employee.getName());  // Log when employee is being saved
+    /**
+     * Save a new employee along with their associated addresses and departments.
+     * If the department does not already exist, it will be saved to the database.
+     *
+     */
+    public Employee saveEmployeeWithAddressesAndDepartments(Employee employee) {
+        // Loop through all the departments assigned to this employee
+        employee.getDepartments().forEach(department -> {
+            // If a department doesn't have an ID, it means it is new, so save it
+            if (department.getId() == null) {
+                departmentRepository.save(department);  // Save the new department
+            }
+        });
+
+        // Now save the employee (along with the addresses and updated departments)
         return employeeRepository.save(employee);
     }
 
-    // Method to fetch all employees from the database
+
     public List<Employee> getAllEmployees() {
-        logger.info("Fetching all employees."); // Log when fetching all employees
-        return (List<Employee>) employeeRepository.findAll();
+        return employeeRepository.findAll();  // Return all employees using the repository's findAll method
     }
 
-    // Method to fetch an employee by ID
-    public Optional<Employee> getEmployeeById(Long id) {
-        logger.info("Fetching employee with ID: {}", id);  // Log when fetching employee by ID
-        return employeeRepository.findById(id);
+
+    public Employee getEmployeeById(Long id) {
+        return employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee with ID " + id + " not found."));  // Throw an exception if not found
     }
 
-    // Method to update employee (PUT)
-    public Employee updateEmployee(Long id, Employee updatedDetails) {
-        logger.info("Updating employee with ID: {}", id);  // Log when employee is being updated
-        return employeeRepository.findById(id).map(employee -> {
-            employee.setName(updatedDetails.getName());
-            employee.setSalary(updatedDetails.getSalary());
-            employee.setDob(updatedDetails.getDob());
-            return employeeRepository.save(employee);
-        }).orElseThrow(() -> new RuntimeException("Employee not found with ID " + id));
-    }
 
-    // Method to partially update employee (PATCH)
-    public Employee partiallyUpdateEmployee(Long id, Employee partialDetails) {
-        logger.info("Partially updating employee with ID: {}", id);  // Log when partially updating employee
-        return employeeRepository.findById(id).map(employee -> {
-            if (partialDetails.getName() != null) {
-                employee.setName(partialDetails.getName());
+    public Employee updateEmployee(Long id, Employee updatedEmployee) {
+        // Fetch the existing employee from the database
+        Employee existingEmployee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee with ID " + id + " not found."));  // Throw an exception if the employee is not found
+
+        // Update the basic fields of the employee (name, salary, date of birth)
+        existingEmployee.setName(updatedEmployee.getName());
+        existingEmployee.setSalary(updatedEmployee.getSalary());
+        existingEmployee.setDob(updatedEmployee.getDob());
+
+        // Handle addresses (clear existing ones and add new ones)
+        existingEmployee.getAddresses().clear();  // Clear the current list of addresses
+        existingEmployee.getAddresses().addAll(updatedEmployee.getAddresses());  // Add all new addresses
+
+        // Handle departments (save new departments and update the list)
+        updatedEmployee.getDepartments().forEach(department -> {
+            // If the department doesn't already have an ID, it's new, so we need to save it
+            if (department.getId() == null) {
+                departmentRepository.save(department);  // Save the new department
             }
-            if (partialDetails.getSalary() != null) {
-                employee.setSalary(partialDetails.getSalary());
-            }
-            if (partialDetails.getDob() != null) {
-                employee.setDob(partialDetails.getDob());
-            }
-            return employeeRepository.save(employee);
-        }).orElseThrow(() -> new RuntimeException("Employee not found with ID " + id));
+        });
+        // Update the existing employee with the new list of departments
+        existingEmployee.setDepartments(updatedEmployee.getDepartments());
+
+        // Save the updated employee and return the result
+        return employeeRepository.save(existingEmployee);
     }
 
-    // Method to delete an employee by ID
+
     public void deleteEmployeeById(Long id) {
-        logger.info("Deleting employee with ID: {}", id);  // Log when employee is being deleted
-        if (employeeRepository.existsById(id)) {
-            employeeRepository.deleteById(id);
-        } else {
-            throw new RuntimeException("Employee not found with ID " + id);
+        // Check if the employee exists before attempting to delete
+        if (!employeeRepository.existsById(id)) {
+            throw new RuntimeException("Employee with ID " + id + " not found.");  // Throw an exception if not found
         }
+        // Delete the employee by their ID
+        employeeRepository.deleteById(id);
     }
 }

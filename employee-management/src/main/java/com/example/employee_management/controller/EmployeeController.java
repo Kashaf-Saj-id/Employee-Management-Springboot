@@ -1,74 +1,69 @@
 package com.example.employee_management.controller;
 
-import com.example.employee_management.model.Employee;
-import com.example.employee_management.service.EmployeeService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import com.example.employee_management.model.Employee;  // Import the Employee model
+import com.example.employee_management.service.EmployeeService;  // Import the EmployeeService
+import org.springframework.beans.factory.annotation.Autowired;  // Import Autowired for dependency injection
+import org.springframework.web.bind.annotation.*;  // Import the required Spring Web annotations
 
 import java.util.List;
-import java.util.Optional;
 
-@RestController
-@RequestMapping("/employees")
+/**
+ * The EmployeeController class defines the REST API endpoints for managing employees.
+ * It acts as a controller for handling HTTP requests and delegating the business logic
+ * to the EmployeeService class.
+ */
+
+@RestController  // Marks this class as a REST controller
+@RequestMapping("/employees")  // Defines the base URL for all endpoints in this controller
 public class EmployeeController {
 
-    private static final Logger logger = LoggerFactory.getLogger(EmployeeController.class); // Create logger instance
-
-    private final EmployeeService employeeService;
-
     @Autowired
-    public EmployeeController(EmployeeService employeeService) {
-        this.employeeService = employeeService;
-    }
+    private EmployeeService employeeService;  // Inject the EmployeeService to handle business logic
 
-    // POST endpoint to create an employee
+    /**
+     * Endpoint to create a new employee with their addresses and departments.
+     * This is a POST request where the employee data is sent in the request body.
+     */
     @PostMapping
-    public Employee createEmployee(@RequestBody Employee employee) {
-        logger.info("Received request to create employee: {}", employee.getName());  // Log request to create employee
-        return employeeService.saveEmployee(employee);
+    public Employee createEmployeeWithAddressesAndDepartments(@RequestBody Employee employee)//This annotation tells Spring to automatically convert the incoming JSON or XML payload into an Employee object.
+     {
+        return employeeService.saveEmployeeWithAddressesAndDepartments(employee);
     }
 
-    // GET endpoint to fetch all employees
+    /**
+     * Endpoint to get all employees.
+     * This is a GET request that retrieves the list of all employees from the service.
+     */
     @GetMapping
     public List<Employee> getAllEmployees() {
-        logger.info("Received request to fetch all employees."); // Log request to fetch all employees
         return employeeService.getAllEmployees();
     }
 
-    // GET endpoint to fetch an employee by ID
+    /**
+     * Endpoint to get a specific employee by their ID.
+     * This is a GET request where the employee ID is passed as a path variable.
+     */
     @GetMapping("/{id}")
-    public Employee getEmployeeById(@PathVariable Long id) {
-        logger.info("Received request to fetch employee with ID: {}", id);  // Log request to fetch employee by ID
-        Optional<Employee> employee = employeeService.getEmployeeById(id);
-        if (employee.isPresent()) {
-            return employee.get();
-        } else {
-            logger.error("Employee with ID: {} not found.", id);  // Log error if employee not found
-            throw new RuntimeException("Employee not found with ID " + id);
-        }
+    public Employee getEmployeeById(@PathVariable Long id) { //This annotation binds the {id} from the URL path
+        return employeeService.getEmployeeById(id);
     }
 
-    // PUT endpoint to update an employee completely
+    /**
+     * Endpoint to update an existing employee.
+     * This is a PUT request where the employee ID is passed in the URL and the updated employee data is sent in the request body.
+     */
     @PutMapping("/{id}")
-    public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee employeeDetails) {
-        logger.info("Received request to update employee with ID: {}", id);  // Log request to update employee
-        return employeeService.updateEmployee(id, employeeDetails);
+    public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee updatedEmployee) {
+        return employeeService.updateEmployee(id, updatedEmployee);
     }
 
-    // PATCH endpoint to update partial employee details
-    @PatchMapping("/{id}")
-    public Employee partiallyUpdateEmployee(@PathVariable Long id, @RequestBody Employee partialEmployee) {
-        logger.info("Received request to partially update employee with ID: {}", id);  // Log partial update request
-        return employeeService.partiallyUpdateEmployee(id, partialEmployee);
-    }
-
-    // DELETE endpoint to delete an employee
+    /**
+     * Endpoint to delete an employee by their ID.
+     * This is a DELETE request where the employee ID is passed as a path variable.
+     */
     @DeleteMapping("/{id}")
-    public String deleteEmployee(@PathVariable Long id) {
-        logger.info("Received request to delete employee with ID: {}", id);  // Log request to delete employee
+    public String deleteEmployeeById(@PathVariable Long id) {
         employeeService.deleteEmployeeById(id);
-        return "Employee with ID " + id + " has been deleted successfully.";
+        return "Employee with ID " + id + " has been deleted.";  // Return a confirmation message
     }
 }
